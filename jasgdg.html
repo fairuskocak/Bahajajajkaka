@@ -1,0 +1,131 @@
+<!DOCTYPE html><html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <title>Photo Booth by Mail</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.0/fabric.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/camanjs/4.1.2/caman.full.min.js"></script>
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', sans-serif;
+      background-color: #1a1a1a;
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px;
+    }
+    header {
+      font-size: 2em;
+      margin-bottom: 20px;
+    }
+    video, canvas {
+      border: 3px solid #00ffcc;
+      border-radius: 8px;
+      margin: 10px 0;
+    }
+    .controls {
+      margin: 10px 0;
+    }
+    .controls button {
+      background-color: #00ffcc;
+      color: #000;
+      padding: 10px 15px;
+      margin: 5px;
+      border: none;
+      border-radius: 5px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    .controls button:hover {
+      background-color: #00ddb3;
+    }
+  </style>
+</head>
+<body>
+  <header>Photo Booth by Mail</header><video id="video" width="640" height="480" autoplay></video>
+
+  <div class="controls">
+    <button onclick="takePhoto()">Ambil Foto</button>
+    <button onclick="addText()">Tambah Teks</button>
+    <button onclick="applyFilter()">Filter Foto</button>
+    <button onclick="printPhoto()">Cetak Foto</button>
+    <button onclick="downloadPhoto()">Download Foto</button>
+  </div><canvas id="canvas" width="640" height="480"></canvas>
+
+  <script>
+    const video = document.getElementById('video');
+    const canvas = new fabric.Canvas('canvas');
+
+    navigator.mediaDevices.getUserMedia({ video: true })
+      .then(stream => video.srcObject = stream)
+      .catch(error => alert("Kamera tidak tersedia."));
+
+    function takePhoto() {
+      const tempCanvas = document.createElement('canvas');
+      tempCanvas.width = 640;
+      tempCanvas.height = 480;
+      const tempCtx = tempCanvas.getContext('2d');
+      tempCtx.drawImage(video, 0, 0);
+      const img = new Image();
+      img.src = tempCanvas.toDataURL('image/png');
+      img.onload = () => {
+        const fabricImg = new fabric.Image(img);
+        canvas.clear();
+        canvas.add(fabricImg);
+        canvas.sendToBack(fabricImg);
+      };
+    }
+
+    function addText() {
+      const text = new fabric.Textbox("Tulis teks di sini", {
+        left: 100,
+        top: 100,
+        fontSize: 24,
+        fill: 'white',
+        backgroundColor: 'black',
+        padding: 4
+      });
+      canvas.add(text);
+    }
+
+    function applyFilter() {
+      const dataUrl = canvas.toDataURL('image/png');
+      const img = new Image();
+      img.src = dataUrl;
+      img.onload = () => {
+        const tempCanvas = document.createElement('canvas');
+        tempCanvas.width = 640;
+        tempCanvas.height = 480;
+        const ctx = tempCanvas.getContext('2d');
+        ctx.drawImage(img, 0, 0);
+        Caman(tempCanvas, function () {
+          this.brightness(10).contrast(15).saturation(20).render(() => {
+            const filteredImg = new Image();
+            filteredImg.src = tempCanvas.toDataURL('image/png');
+            filteredImg.onload = () => {
+              const fabricImg = new fabric.Image(filteredImg);
+              canvas.clear();
+              canvas.add(fabricImg);
+              canvas.sendToBack(fabricImg);
+            };
+          });
+        });
+      };
+    }
+
+    function printPhoto() {
+      const dataUrl = canvas.toDataURL("image/png");
+      const win = window.open('', '_blank');
+      win.document.write(`<img src="${dataUrl}" onload="window.print(); window.close();">`);
+      win.document.close();
+    }
+
+    function downloadPhoto() {
+      const link = document.createElement('a');
+      link.download = 'hasil_foto.png';
+      link.href = canvas.toDataURL();
+      link.click();
+    }
+  </script></body>
+</html>
